@@ -1,5 +1,6 @@
 import socket
 import pickle
+import threading
 import time
 
 HOST = '127.0.0.1'
@@ -10,16 +11,14 @@ M = {
 
     'B': {'N1': [1, 4, 7],'N2': [2, 5, 8], 'N3': [3, 6, 9]}}
 
-data_1 = pickle.dumps(M['A'])
-data_2 = pickle.dumps(M['B']['N1'])
+R = {}
 
-R = None
 
 def send_data(data, HOST, PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
         s.sendall(data)
-    return
+
 
 def back_data():
     PORT = 8080
@@ -37,21 +36,38 @@ def back_data():
                 recvd_data = pickle.loads(data)
                 print('Received' + str(recvd_data))
 
-    return
+    return recvd_data
 
 
-for i in M['B']:
-    data_2 = pickle.dumps(M['B'][i])
-    PORT += 1
-    send_data(data_1, '127.0.0.1', PORT)
-    time.sleep(1)
-    send_data(data_2, '127.0.0.1', PORT)
+def call():
+    PORT = 8080
+    data_1 = pickle.dumps(M['A'])
+    for i in M['B']:
+        data_2 = pickle.dumps(M['B'][i])
+        PORT += 1
+        send_data(data_1, '127.0.0.1', PORT)
+        time.sleep(1)
+        send_data(data_2, '127.0.0.1', PORT)
 
 
-counter = 0
-while True:
-    if counter < 3:
-        back_data()
-        counter += 1
-    else:
-        break
+def listen():
+    counter = 0
+    while True:
+        if counter < 3:
+            R.update(back_data())
+            counter += 1
+        else:
+            break
+    print(R)
+
+
+def main():
+
+        thread_1 = threading.Thread(target=listen)
+        time.sleep(1)
+        thread_2 = threading.Thread(target=call)
+        thread_1.start()
+        thread_2.start()
+
+
+if __name__ == '__main__':main()
